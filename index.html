@@ -1,0 +1,390 @@
+<!DOCTYPE html>
+<html lang="zh-Hant-HK">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FCMS 靜境大草原 · FCMS Quiet Safari</title>
+<meta name="description" content="郭怡雅神父紀念學校課堂噪音監測 — 安靜時動物現身，太嘈就走晒。FCMS Quiet Safari classroom noise monitor.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;700;800&family=Noto+Sans+TC:wght@400;500;700;900&display=swap" rel="stylesheet">
+<style>
+:root{
+  --sky-top:#8ecfe8; --sky-mid:#bfe6ef; --sky-low:#f5ecd8;
+  --grass:#7fb069; --grass-dark:#5c8a4e; --ground:#c9a86b;
+  --ink:#2d3a2e; --ink-soft:#5a6b57;
+  --card:#fffdf6; --card-line:#e8dfc8;
+  --alert:#d9634e; --good:#4e8a5a; --accent:#e88d34;
+  --radius:20px;
+  --font-display:"Baloo 2","Noto Sans TC",sans-serif;
+  --font-body:"Noto Sans TC",sans-serif;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{height:100%}
+body{
+  font-family:var(--font-body);color:var(--ink);
+  background:linear-gradient(180deg,var(--sky-top) 0%,var(--sky-mid) 34%,var(--sky-low) 62%,var(--grass) 100%);
+  overflow:hidden;
+}
+#stage{position:fixed;inset:0;display:flex;flex-direction:column}
+
+/* ---------- Sky & scene ---------- */
+#scene{position:relative;flex:1;min-height:0}
+.sun{position:absolute;top:6%;right:8%;width:84px;height:84px;border-radius:50%;
+  background:radial-gradient(circle at 38% 35%,#ffe9a8,#f7c948 70%);
+  box-shadow:0 0 60px 18px rgba(247,201,72,.35);animation:breathe 6s ease-in-out infinite}
+@keyframes breathe{50%{transform:scale(1.06)}}
+.cloud{position:absolute;background:#fff;opacity:.85;border-radius:50px;filter:blur(1px)}
+.cloud::before,.cloud::after{content:"";position:absolute;background:#fff;border-radius:50%}
+.cloud::before{width:55%;height:160%;top:-70%;left:18%}
+.cloud::after{width:40%;height:130%;top:-50%;right:15%}
+.cloud.c1{width:120px;height:36px;top:12%;left:6%;animation:drift 60s linear infinite}
+.cloud.c2{width:80px;height:26px;top:24%;left:55%;animation:drift 85s linear infinite reverse}
+@keyframes drift{from{transform:translateX(-15vw)}to{transform:translateX(115vw)}}
+
+/* ground */
+.ground{position:absolute;bottom:0;left:0;right:0;height:26%;
+  background:linear-gradient(180deg,var(--grass) 0%,var(--grass-dark) 100%);
+  border-radius:48% 52% 0 0 / 34% 30% 0 0}
+.acacia{position:absolute;bottom:22%;font-size:64px;filter:drop-shadow(0 6px 4px rgba(0,0,0,.15))}
+.hill{position:absolute;bottom:24%;left:-6%;width:40%;height:14%;background:#94bd7f;border-radius:50% 50% 0 0;opacity:.7}
+
+/* ---------- Animals ---------- */
+#herd{position:absolute;bottom:9%;left:0;right:0;height:52%;pointer-events:none}
+.animal{position:absolute;bottom:0;font-size:clamp(34px,5.4vw,62px);
+  transform:translateY(130%) scale(.6);opacity:0;transition:transform .9s cubic-bezier(.22,1.4,.36,1),opacity .5s}
+.animal.shown{transform:translateY(0) scale(1);opacity:1}
+.animal.fleeing{transform:translateY(-14%) translateX(40vw) scale(.9) rotate(-8deg);opacity:0;
+  transition:transform 1.1s ease-in,opacity .9s}
+.animal .nm{display:block;text-align:center;font-size:.34em;font-weight:700;color:var(--ink-soft);
+  text-shadow:0 1px 0 #fff;margin-top:-4px}
+
+/* ---------- HUD ---------- */
+#hud{position:absolute;top:0;left:0;right:0;padding:14px 18px;display:flex;justify-content:space-between;
+  align-items:flex-start;gap:12px;pointer-events:none}
+.brand{pointer-events:none}
+.brand h1{font-family:var(--font-display);font-size:clamp(20px,3vw,30px);font-weight:800;line-height:1.15;
+  color:var(--ink);text-shadow:0 2px 0 rgba(255,255,255,.6)}
+.brand p{font-size:clamp(11px,1.4vw,14px);color:var(--ink-soft);font-weight:500}
+.panel{pointer-events:auto;display:flex;flex-direction:column;gap:8px;align-items:flex-end}
+.card{background:var(--card);border:2px solid var(--card-line);border-radius:var(--radius);
+  padding:10px 14px;box-shadow:0 4px 14px rgba(45,58,46,.10)}
+#meterCard{min-width:200px}
+.meter-label{display:flex;justify-content:space-between;font-size:12px;font-weight:700;color:var(--ink-soft)}
+.meter{margin-top:6px;height:16px;border-radius:10px;background:#ece5d2;overflow:hidden;border:1.5px solid var(--card-line)}
+#meterFill{height:100%;width:0%;border-radius:10px;transition:width .12s linear,background-color .3s;
+  background:var(--good)}
+#meterFill.warn{background:var(--accent)}#meterFill.loud{background:var(--alert)}
+.threshold-ticks{position:relative;height:0}
+.tick{position:absolute;top:-22px;width:2px;height:14px;background:var(--ink);opacity:.35;border-radius:2px}
+.tick::after{content:attr(data-label);position:absolute;top:-14px;left:50%;transform:translateX(-50%);
+  font-size:9px;white-space:nowrap;color:var(--ink-soft);font-weight:700}
+.streak-row{display:flex;align-items:center;gap:8px;margin-top:8px}
+.streak-num{font-family:var(--font-display);font-weight:800;font-size:26px;line-height:1}
+.streak-lab{font-size:11px;color:var(--ink-soft);font-weight:600;line-height:1.25}
+.btnrow{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end}
+button{font-family:var(--font-body);font-weight:700;border:none;cursor:pointer;border-radius:14px;
+  padding:9px 14px;font-size:13px;transition:transform .12s,box-shadow .12s,background .2s;
+  box-shadow:0 3px 0 rgba(45,58,46,.18)}
+button:active{transform:translateY(2px);box-shadow:0 1px 0 rgba(45,58,46,.18)}
+.btn-main{background:var(--accent);color:#fff}
+.btn-soft{background:var(--card);color:var(--ink);border:2px solid var(--card-line)}
+.btn-ghost{background:transparent;color:var(--ink);box-shadow:none;border:2px dashed var(--card-line)}
+.btn-danger{background:var(--alert);color:#fff}
+button.on{background:var(--good);color:#fff}
+
+/* goal chips */
+.chips{display:flex;gap:6px}
+.chip{padding:7px 12px;border-radius:12px;background:var(--card);border:2px solid var(--card-line);
+  font-size:12px;font-weight:700;color:var(--ink-soft)}
+.chip.sel{background:var(--ink);color:#fff;border-color:var(--ink)}
+
+/* centre message */
+#bigMsg{position:absolute;top:24%;left:50%;transform:translate(-50%,-50%) scale(.7);opacity:0;
+  font-family:var(--font-display);font-weight:800;font-size:clamp(26px,5vw,52px);text-align:center;
+  color:var(--ink);text-shadow:0 3px 0 rgba(255,255,255,.7);transition:all .35s;pointer-events:none}
+#bigMsg.show{opacity:1;transform:translate(-50%,-50%) scale(1)}
+#bigMsg.bad{color:var(--alert)}
+#bigMsg.good{color:var(--good)}
+
+/* goal banner */
+#goalBanner{position:absolute;top:16px;left:50%;transform:translateX(-50%);
+  font-size:clamp(11px,1.5vw,14px);font-weight:700;color:var(--ink-soft);background:rgba(255,253,246,.85);
+  padding:6px 14px;border-radius:30px;border:1.5px solid var(--card-line);pointer-events:none;white-space:nowrap}
+
+/* ---------- Overlay (start / settings) ---------- */
+#overlay{position:fixed;inset:0;background:rgba(45,58,46,.55);backdrop-filter:blur(5px);
+  display:flex;align-items:center;justify-content:center;z-index:50;padding:18px}
+#overlay.hidden{display:none}
+.modal{background:var(--card);border-radius:26px;max-width:520px;width:100%;padding:28px 26px;
+  box-shadow:0 20px 60px rgba(0,0,0,.35);max-height:92vh;overflow-y:auto}
+.modal h2{font-family:var(--font-display);font-size:26px;font-weight:800;margin-bottom:6px}
+.modal .sub{color:var(--ink-soft);font-size:14px;line-height:1.6;margin-bottom:18px}
+.modal label{display:block;font-size:13px;font-weight:700;margin:16px 0 6px;color:var(--ink)}
+.modal input[type=range]{width:100%;accent-color:var(--accent)}
+.modal input[type=text]{width:100%;padding:10px 12px;border:2px solid var(--card-line);border-radius:12px;
+  font-family:var(--font-body);font-size:14px;background:#fff}
+.modal .row{display:flex;gap:10px;margin-top:22px}
+.modal .row button{flex:1;padding:13px;font-size:15px}
+.mnote{margin-top:14px;font-size:12px;color:var(--ink-soft);line-height:1.6;background:#f6f2e6;
+  border-radius:12px;padding:10px 12px}
+select{width:100%;padding:10px 12px;border:2px solid var(--card-line);border-radius:12px;
+  font-family:var(--font-body);font-size:14px;background:#fff}
+
+#toast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);background:var(--ink);color:#fff;
+  padding:10px 18px;border-radius:14px;font-size:13px;font-weight:600;opacity:0;transition:opacity .3s;z-index:60;pointer-events:none}
+#toast.show{opacity:.95}
+
+@media (max-width:640px){
+  #hud{flex-direction:column;align-items:stretch}
+  .panel{align-items:stretch}.btnrow{justify-content:center}
+}
+</style>
+</head>
+<body>
+<div id="stage">
+  <div id="scene">
+    <div class="sun"></div>
+    <div class="cloud c1"></div><div class="cloud c2"></div>
+    <div class="hill"></div>
+    <div class="ground"></div>
+    <div class="acacia" style="left:4%">🌳</div>
+    <div class="acacia" style="left:78%;bottom:19%">🌿</div>
+    <div id="herd"></div>
+    <div id="goalBanner">🎯 目標：<span id="goalName">安靜自習</span></div>
+    <div id="bigMsg"></div>
+  </div>
+
+  <div id="hud">
+    <div class="brand">
+      <h1>🦁 FCMS 靜境大草原</h1>
+      <p>郭怡雅神父紀念學校 · FCMS Quiet Safari</p>
+    </div>
+    <div class="panel">
+      <div class="card chips" id="goalChips">
+        <button class="chip" data-goal="silent">🤫 靜默</button>
+        <button class="chip sel" data-goal="work">📖 自習</button>
+        <button class="chip" data-goal="group">👥 小組</button>
+      </div>
+      <div class="card" id="meterCard">
+        <div class="meter-label"><span>全班音量</span><span id="dbRead">— dB</span></div>
+        <div class="threshold-ticks" id="ticks"></div>
+        <div class="meter"><div id="meterFill"></div></div>
+        <div class="streak-row">
+          <div class="streak-num" id="streakNum">0</div>
+          <div class="streak-lab">秒靜默連續<br>quiet streak</div>
+          <div style="flex:1"></div>
+          <div class="streak-lab" style="text-align:right"><span id="shownCount" style="font-weight:800;font-size:18px">0</span>/<span id="totalCount">10</span><br>動物現身</div>
+        </div>
+      </div>
+      <div class="btnrow">
+        <button class="btn-main" id="btnStart">🎤 開始</button>
+        <button class="btn-soft" id="btnFull">⛶</button>
+        <button class="btn-soft" id="btnSettings">⚙️</button>
+        <button class="btn-danger" id="btnReset">重設</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Start overlay -->
+<div id="overlay">
+  <div class="modal">
+    <h2>🦁 FCMS 靜境大草原</h2>
+    <p class="sub">全班保持安靜，草原上的小動物就會一隻隻現身；一旦太嘈，動物會嚇走。<br>
+    Keep the class quiet and the shy animals come out — get loud and they run away.</p>
+    <label for="className">班別名稱 Class name</label>
+    <input type="text" id="className" placeholder="例如：P5A">
+    <label for="micSel">麥克風 Microphone</label>
+    <select id="micSel"><option value="">系統預設 Default</option></select>
+    <label for="sens">靈敏度 Sensitivity <span id="sensVal">1.0×</span></label>
+    <input type="range" id="sens" min="0.5" max="2.5" step="0.1" value="1">
+    <div class="mnote">
+      🔒 私隱：聲音<b>只在本機量度音量</b>，不會錄音、不會上載、無帳號。<br>
+      Audio level is measured locally only. Nothing is recorded, uploaded or shared.
+    </div>
+    <div class="row">
+      <button class="btn-soft btn-ghost" id="btnSkip">稍後設定</button>
+      <button class="btn-main" id="btnGo">🎤 開麥克風開始</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+"use strict";
+const ANIMALS=[
+ ["🦔","箭豬 Hedgehog"],["🐇","兔仔 Rabbit"],["🐢","烏龜 Tortoise"],["🦎","變色龍 Chameleon"],
+ ["🦒","長頸鹿 Giraffe"],["🦓","斑馬 Zebra"],["🐘","大象 Elephant"],["🦜","鸚鵡 Parrot"],
+ ["🐆","豹 Leopard"],["🦏","犀牛 Rhino"],["🦁","獅子 Lion"],["🦚","孔雀 Peacock"]
+];
+const GOALS={
+ silent:{name:"全程靜默 Silent",soft:16,loud:34},
+ work:  {name:"安靜自習 Quiet work",soft:30,loud:52},
+ group: {name:"小組討論 Group talk",soft:46,loud:74}
+};
+const $=s=>document.querySelector(s);
+const store={
+  get(k,d){try{const v=localStorage.getItem("fcms-safari:"+k);return v==null?d:JSON.parse(v)}catch{return d}},
+  set(k,v){try{localStorage.setItem("fcms-safari:"+k,JSON.stringify(v))}catch{}}
+};
+
+/* ---------- build herd ---------- */
+const herd=$("#herd");
+ANIMALS.forEach(([e,n],i)=>{
+  const d=document.createElement("div");d.className="animal";
+  d.style.left=(6+i*(88/(ANIMALS.length-1)))+"%";
+  d.innerHTML=`<span>${e}</span><span class="nm">${n.split(" ")[0]}</span>`;
+  d.title=n;herd.appendChild(d);
+});
+const animalEls=[...herd.children];
+$("#totalCount").textContent=ANIMALS.length;
+
+/* ---------- state ---------- */
+let S={goal:"work",sens:1,cls:store.get("cls","")};
+let streak=0,running=false,audio=null,analyser=null,stream=null,raf=null;
+let buf=null,lastLoudAt=0,scared=false;
+const FLEE_HOLD=900;      // ms above loud threshold before fleeing
+const REVEAL_EVERY=6;     // seconds of quiet per animal
+
+/* ---------- meter ---------- */
+const fill=$("#meterFill"),dbRead=$("#dbRead");
+const pct2db=p=>(20+58*(p/100)).toFixed(0); // rough display mapping
+function drawMeter(p){
+  fill.style.width=Math.min(100,p)+"%";
+  const goal=GOALS[S.goal];
+  fill.className = p>=goal.loud ? "loud" : p>=goal.soft ? "warn" : "";
+  fill.id="meterFill";
+  dbRead.textContent=pct2db(p)+" dB";
+  $("#ticks").innerHTML=`
+    <div class="tick" style="left:${goal.soft}%" data-label="靜"></div>
+    <div class="tick" style="left:${goal.loud}%" data-label="嘈"></div>`;
+}
+drawMeter(0);
+
+/* ---------- goal chips ---------- */
+$("#goalChips").addEventListener("click",e=>{
+  const b=e.target.closest(".chip");if(!b)return;
+  S.goal=b.dataset.goal;store.set("goal",S.goal);syncUI();
+  toast("目標已轉為："+GOALS[S.goal].name);
+});
+function syncUI(){
+  document.querySelectorAll(".chip").forEach(c=>c.classList.toggle("sel",c.dataset.goal===S.goal));
+  $("#goalName").textContent=GOALS[S.goal].name;
+  $("#sens").value=S.sens;$("#sensVal").textContent=S.sens.toFixed(1)+"×";
+  $("#className").value=S.cls;
+}
+
+/* ---------- audio ---------- */
+async function start(){
+  if(running)return stop();
+  try{
+    stream=await navigator.mediaDevices.getUserMedia({audio:{
+      deviceId:S.mic?{exact:S.mic}:undefined,echoCancellation:false,noiseSuppression:true,autoGainControl:false}});
+    const ctx=new (window.AudioContext||window.webkitAudioContext)();
+    analyser=ctx.createAnalyser();analyser.fftSize=1024;analyser.smoothingTimeConstant=.75;
+    ctx.createMediaStreamSource(stream).connect(analyser);
+    buf=new Float32Array(analyser.fftSize);
+    audio=ctx;running=true;
+    $("#btnStart").textContent="⏸ 停止";$("#btnStart").classList.add("on");
+    toast("麥克風已連接 🎤");loop();
+  }catch(err){
+    bigMsg("mic"===err.name||err.name==="NotAllowedError"?"🎤 麥克風被拒絕\nMic blocked":"🎤 無法連接麥克風","bad",1600);
+  }
+}
+function stop(){
+  running=false;cancelAnimationFrame(raf);
+  stream?.getTracks().forEach(t=>t.stop());audio?.close();
+  audio=analyser=stream=null;
+  $("#btnStart").textContent="🎤 開始";$("#btnStart").classList.remove("on");
+}
+function rms(){
+  analyser.getFloatTimeDomainData(buf);
+  let s=0;for(let i=0;i<buf.length;i++)s+=buf[i]*buf[i];
+  return Math.sqrt(s/buf.length);
+}
+function loop(){
+  if(!running)return;
+  const raw=Math.min(100,rms()*100*4.2*S.sens);
+  const goal=GOALS[S.goal];
+  drawMeter(raw);
+  const now=performance.now();
+  if(raw>=goal.loud){
+    if(!scared&&now-lastLoudAt>FLEE_HOLD){flee()}
+    lastLoudAt=Math.max(lastLoudAt,now-FLEE_HOLD+1);
+    streak=0;
+  }else if(raw<=goal.soft){
+    lastLoudAt=0;scared=false;
+    streak+=1/60; /* assume ~60fps tick */
+  }else{
+    lastLoudAt=0;scared=false;
+    streak+=0.35/60; /* half-credit in the middle band */
+  }
+  updateHerd();
+  $("#streakNum").textContent=Math.floor(streak);
+  raf=requestAnimationFrame(loop);
+}
+function shownCount(){return Math.min(ANIMALS.length,Math.floor(streak/REVEAL_EVERY))}
+function updateHerd(){
+  const n=shownCount();
+  animalEls.forEach((el,i)=>el.classList.toggle("shown",i<n&&!el.classList.contains("fleeing")));
+  $("#shownCount").textContent=animalEls.filter(e=>e.classList.contains("shown")).length;
+  if(n===ANIMALS.length&&!(bigMsg.dataset.done==="all")){
+    bigMsg.dataset.done="all";bigMsg("🎉 全部動物都出晒嚟！全草原最靜嘅班房！","good",2600);
+  }
+}
+function flee(){
+  scared=true;streak=0;bigMsg.dataset.done="";
+  animalEls.forEach(el=>{
+    if(el.classList.contains("shown")){el.classList.remove("shown");el.classList.add("fleeing");
+      setTimeout(()=>el.classList.remove("fleeing"),1200)}
+  });
+  $("#shownCount").textContent=0;
+  bigMsg("太嘈了！動物走晒 🏃💨","bad",1800);
+}
+
+/* ---------- ui helpers ---------- */
+let msgTimer=null;
+function bigMsg(text,tone,ms){
+  const m=$("#bigMsg");m.textContent=text;m.className=tone||"";m.id="bigMsg";
+  m.classList.add("show");clearTimeout(msgTimer);
+  msgTimer=setTimeout(()=>m.classList.remove("show"),ms||1500);
+}
+let toastTimer=null;
+function toast(t){const el=$("#toast");el.textContent=t;el.classList.add("show");
+  clearTimeout(toastTimer);toastTimer=setTimeout(()=>el.classList.remove("show"),2200)}
+$("#btnStart").addEventListener("click",start);
+$("#btnReset").addEventListener("click",()=>{
+  streak=0;bigMsg.dataset.done="";animalEls.forEach(e=>{e.classList.remove("shown");e.classList.remove("fleeing")});
+  $("#shownCount").textContent=0;$("#streakNum").textContent=0;toast("已重設 Reset ✓");
+});
+$("#btnFull").addEventListener("click",()=>{
+  document.fullscreenElement?document.exitFullscreen():document.documentElement.requestFullscreen();
+});
+$("#btnSettings").addEventListener("click",()=>{overlay.classList.remove("hidden")});
+$("#sens").addEventListener("input",e=>{S.sens=+e.target.value;$("#sensVal").textContent=S.sens.toFixed(1)+"×";store.set("sens",S.sens)});
+$("#className").addEventListener("input",e=>{S.cls=e.target.value;store.set("cls",S.cls)});
+$("#micSel").addEventListener("change",e=>{S.mic=e.target.value;store.set("mic",S.mic)});
+
+/* ---------- overlay & mic list ---------- */
+const overlay=$("#overlay");
+$("#btnGo").addEventListener("click",()=>{overlay.classList.add("hidden");start()});
+$("#btnSkip").addEventListener("click",()=>overlay.classList.add("hidden"));
+navigator.mediaDevices?.enumerateDevices?.().then(ds=>{
+  const sel=$("#micSel");
+  ds.filter(d=>d.kind==="audioinput").forEach(d=>{
+    const o=document.createElement("option");o.value=d.deviceId;
+    o.textContent=d.label||`Mic ${sel.length}`;sel.appendChild(o);
+  });
+  if(S.mic)sel.value=S.mic;
+});
+/* restore */
+S.goal=store.get("goal","work");S.sens=store.get("sens",1);S.mic=store.get("mic","");
+syncUI();
+document.addEventListener("keydown",e=>{
+  if(e.key===" "&&!e.repeat&&overlay.classList.contains("hidden")){e.preventDefault();start()}
+});
+</script>
+</body>
+</html>
